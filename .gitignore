@@ -1,3 +1,4 @@
 .idea/*
 joeroganredditbot.iml
 resources/posts_replied_to.txt
+venv/*

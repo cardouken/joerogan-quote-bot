@@ -12,13 +12,13 @@ print("Currently listening in: " + os.environ['active_subreddit'])
 
 
 def bot_login():
-    print("Logging in as " + os.environ['reddit_username'] + " (DEVELOPMENT BRANCH)")
+    print("Logging in as " + os.environ['reddit_username'])
     r = praw.Reddit(username=os.environ['reddit_username'],
                     password=os.environ['reddit_password'],
                     client_id=os.environ['client_id'],
                     client_secret=os.environ['client_secret'],
                     user_agent="Joe Rogan quote responder:v0.0.1 (by /u/picmip)")
-    print("Logged in as " + os.environ['reddit_username'] + " (DEVELOPMENT BRANCH)")
+    print("Logged in as " + os.environ['reddit_username'])
 
     return r
 

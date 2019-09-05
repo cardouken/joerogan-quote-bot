@@ -8,15 +8,18 @@ import time
 import random
 import os
 
+active_subreddit = 'picmipbotplayground';
+print("Currently listening in: " + active_subreddit)
+
 
 def bot_login():
-    print("Logging in as " + os.environ['reddit_username'] + " ...")
+    print("Logging in as " + os.environ['reddit_username'] + " (DEVELOPMENT BRANCH)")
     r = praw.Reddit(username=os.environ['reddit_username'],
                     password=os.environ['reddit_password'],
                     client_id=os.environ['client_id'],
                     client_secret=os.environ['client_secret'],
                     user_agent="Joe Rogan quote responder:v0.0.1 (by /u/picmip)")
-    print("Logged in as " + os.environ['reddit_username'])
+    print("Logged in as " + os.environ['reddit_username'] + " (DEVELOPMENT BRANCH)")
 
     return r
 
@@ -51,7 +54,7 @@ def run_bot(r):
             pm.mark_read()
             print("Replied to PM with: " + "\"" + random_phrase.strip() + "\"")
     else:
-        for comment in r.subreddit('picmipbotplayground').comments(limit=100):
+        for comment in r.subreddit(active_subreddit).comments(limit=100):
             if comment.id not in posts_replied_to and "!joe" in comment.body.lower():
                 print("String with \"!joe\" found in comment " + comment.id)
                 with open("resources/list.txt") as file:
@@ -64,7 +67,6 @@ def run_bot(r):
                     traceback.print_exc()
 
                 posts_replied_to.append(comment.id)
-
         time.sleep(10)
 
         with open("resources/posts_replied_to.txt", "w") as f:

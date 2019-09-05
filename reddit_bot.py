@@ -48,14 +48,18 @@ def run_bot(r):
                 phrases = file.readlines()
             random_phrase = random.choice(phrases)
             msg = ">\"*" + random_phrase.strip() + "*\" \n\n ^Joe ^Rogan"
-
             pm.author.message(repsub, msg)
             pm.mark_read()
             print("Replied to PM with: " + "\"" + random_phrase.strip() + "\"")
     else:
+
         for comment in r.subreddit(os.environ['active_subreddit']).comments(limit=100):
             if comment.id not in posts_replied_to and "!joe" in comment.body.lower():
-                print("String with \"!joe\" found in comment " + comment.id)
+                print("Comment containing \"!joe\" posted by "
+                      + str(comment.author)
+                      + " to "
+                      + comment.submission.url
+                      + comment.id)
                 with open("resources/list.txt") as file:
                     phrases = file.readlines()
                 random_phrase = random.choice(phrases)
@@ -64,7 +68,6 @@ def run_bot(r):
                     print("Replied to comment " + comment.id + " with " + "\"" + random_phrase.strip() + "\"")
                 except APIException as e:
                     traceback.print_exc()
-
                 posts_replied_to.append(comment.id)
         time.sleep(10)
 

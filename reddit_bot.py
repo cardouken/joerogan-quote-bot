@@ -53,7 +53,7 @@ def run_bot(r):
             print("Replied to PM with: " + "\"" + random_phrase.strip() + "\"")
     else:
 
-        for comment in r.subreddit(os.environ['active_subreddit']).comments(limit=100):
+        for comment in r.subreddit(os.environ['active_subreddit']).stream.comments():
             if comment.id not in posts_replied_to and "!joe" in comment.body.lower():
                 print("Comment containing \"!joe\" posted by "
                       + str(comment.author)

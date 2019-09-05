@@ -50,7 +50,7 @@ def run_bot(r):
             pm.author.message(repsub, msg)
             pm.mark_read()
     else:
-        for comment in r.subreddit('picmipbotplayground').comments(limit=25):
+        for comment in r.subreddit('JoeRogan').comments(limit=100):
             if comment.id not in posts_replied_to and "!joe" in comment.body.lower():
                 print("String with \"!joe\" found in comment " + comment.id)
                 with open("resources/list.txt") as file:

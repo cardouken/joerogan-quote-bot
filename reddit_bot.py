@@ -20,11 +20,9 @@ def bot_login():
     return r
 
 
-# Have we run this code before? If not, create an empty list
 if not os.path.isfile("/resources/posts_replied_to.txt"):
     posts_replied_to = []
 
-# If we have run the code before, load the list of posts we have replied to
 else:
     # Read the file into a list and remove any empty values
     with open("/resources/posts_replied_to.txt", "r") as f:
@@ -41,15 +39,14 @@ def run_bot(r):
                 phrases = file.readlines()
             random_phrase = random.choice(phrases)
             try:
-                # comment.reply(">\"*" + random_phrase.strip() + "*\" \n\n ^Joe ^Rogan")
+                comment.reply(">\"*" + random_phrase.strip() + "*\" \n\n ^Joe ^Rogan")
                 print("Replied to comment " + comment.id + " with " + "\"" + random_phrase.strip() + "\"")
             except APIException as e:
                 traceback.print_exc()
 
             posts_replied_to.append(comment.id)
 
-    print("Sleep for 10 seconds")
-    # Sleep for 10 seconds...
+    print("Sleeping for 10 seconds")
     time.sleep(10)
 
     with open("posts_replied_to.txt", "w") as f:

@@ -35,7 +35,7 @@ else:
 
 def run_bot(r):
     for comment in r.subreddit('joerogan+picmipbotplayground').comments(limit=25):
-        if comment.id not in posts_replied_to and "dmt" in comment.body.lower():
+        if comment.id not in posts_replied_to and "!joe" in comment.body.lower():
             print("String with \"!joe\" found in comment " + comment.id)
             with open("/resources/list.txt") as file:
                 phrases = file.readlines()

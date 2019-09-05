@@ -38,8 +38,8 @@ def run_bot(r):
             frm = pm.author
             sub = pm.subject
 
-            print(frm)
-            print(sub)
+            print("PM from: " + str(frm))
+            print("Subject: " + sub)
 
             repsub = 'Re: ' + sub
             with open("resources/list.txt") as file:
@@ -49,8 +49,9 @@ def run_bot(r):
 
             pm.author.message(repsub, msg)
             pm.mark_read()
+            print("Replied to PM with: " + "\"" + random_phrase.strip() + "\"")
     else:
-        for comment in r.subreddit('JoeRogan').comments(limit=100):
+        for comment in r.subreddit('JoeRogan+picmipbotplayground').comments(limit=100):
             if comment.id not in posts_replied_to and "!joe" in comment.body.lower():
                 print("String with \"!joe\" found in comment " + comment.id)
                 with open("resources/list.txt") as file:
@@ -64,7 +65,6 @@ def run_bot(r):
 
                 posts_replied_to.append(comment.id)
 
-        print("Sleeping for 10 seconds")
         time.sleep(10)
 
         with open("resources/posts_replied_to.txt", "w") as f:

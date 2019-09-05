@@ -2,6 +2,7 @@ import traceback
 
 import praw
 from praw.exceptions import APIException
+from praw.models import Message
 
 import time
 import random
@@ -32,11 +33,8 @@ else:
 
 
 def run_bot(r):
-    with open("resources/list.txt") as file:
-        phrases = file.readlines()
-        random_phrase = random.choice(phrases)
-
-        for pm in r.inbox.unread():
+    for pm in r.inbox.unread():
+        if isinstance(pm, Message):
             frm = pm.author
             sub = pm.subject
 
@@ -44,29 +42,34 @@ def run_bot(r):
             print(sub)
 
             repsub = 'Re: ' + sub
+            with open("resources/list.txt") as file:
+                phrases = file.readlines()
+            random_phrase = random.choice(phrases)
             msg = ">\"*" + random_phrase.strip() + "*\" \n\n ^Joe ^Rogan"
 
             pm.author.message(repsub, msg)
             pm.mark_read()
+    else:
+        for comment in r.subreddit('picmipbotplayground').comments(limit=25):
+            if comment.id not in posts_replied_to and "!joe" in comment.body.lower():
+                print("String with \"!joe\" found in comment " + comment.id)
+                with open("resources/list.txt") as file:
+                    phrases = file.readlines()
+                random_phrase = random.choice(phrases)
+                try:
+                    comment.reply(">\"*" + random_phrase.strip() + "*\" \n\n ^Joe ^Rogan")
+                    print("Replied to comment " + comment.id + " with " + "\"" + random_phrase.strip() + "\"")
+                except APIException as e:
+                    traceback.print_exc()
 
-    for comment in r.subreddit('joerogan+picmipbotplayground').comments(limit=25):
-        if comment.id not in posts_replied_to and "!joe" in comment.body.lower():
-            print("String with \"!joe\" found in comment " + comment.id)
+                posts_replied_to.append(comment.id)
 
-            try:
-                comment.reply(">\"*" + random_phrase.strip() + "*\" \n\n ^Joe ^Rogan")
-                print("Replied to comment " + comment.id + " with " + "\"" + random_phrase.strip() + "\"")
-            except APIException as e:
-                traceback.print_exc()
+        print("Sleeping for 10 seconds")
+        time.sleep(10)
 
-            posts_replied_to.append(comment.id)
-
-    print("Sleeping for 10 seconds")
-    time.sleep(10)
-
-    with open("resources/posts_replied_to.txt", "w") as f:
-        for post_id in posts_replied_to:
-            f.write(post_id + "\n")
+        with open("resources/posts_replied_to.txt", "w") as f:
+            for post_id in posts_replied_to:
+                f.write(post_id + "\n")
 
 
 r = bot_login()

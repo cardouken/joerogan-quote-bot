@@ -58,7 +58,8 @@ def run_bot(r):
                 print("Comment containing \"!joe\" posted by "
                       + str(comment.author)
                       + " to "
-                      + comment.submission.url
+                      + "https://reddit.com"
+                      + comment.submission.permalink
                       + comment.id)
                 with open("resources/list.txt") as file:
                     phrases = file.readlines()

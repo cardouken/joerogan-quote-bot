@@ -8,8 +8,7 @@ import time
 import random
 import os
 
-active_subreddit = 'picmipbotplayground';
-print("Currently listening in: " + active_subreddit)
+print("Currently listening in: " + os.environ['active_subreddit'])
 
 
 def bot_login():
@@ -54,7 +53,7 @@ def run_bot(r):
             pm.mark_read()
             print("Replied to PM with: " + "\"" + random_phrase.strip() + "\"")
     else:
-        for comment in r.subreddit(active_subreddit).comments(limit=100):
+        for comment in r.subreddit(os.environ['active_subreddit']).comments(limit=100):
             if comment.id not in posts_replied_to and "!joe" in comment.body.lower():
                 print("String with \"!joe\" found in comment " + comment.id)
                 with open("resources/list.txt") as file:

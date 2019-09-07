@@ -96,7 +96,7 @@ def run_bot(r):
                     pass
 
             if not checkkey(posts,
-                            comment.id) and "!joe" in comment.body.lower() and comment.created_utc < time.time() - 30:
+                            comment.id) and "!joe" in comment.body.lower() and comment.created_utc > time.time() - 30:
                 if comment.author in authors and int(timestampkey(authors, comment.id)) > int(time.time() - cooldown):
                     print(str(comment.author), "in cooldown for", str(
                         authors.get(comment.author) - int(time.time() - cooldown)) + " seconds")
@@ -119,7 +119,7 @@ def run_bot(r):
                     savecooldown()
                     saveposts()
 
-            elif checkkey(posts,
+            elif not checkkey(posts,
                           comment.id) and "!joe" in comment.body.lower() and comment.created_utc < time.time() - 30:
                 now = int(time.time())
                 then = int(comment.created_utc)

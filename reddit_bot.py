@@ -22,28 +22,30 @@ with open("resources/posts.csv") as f:
             continue
         (key, val) = line.strip().split(',')
         posts[key] = val
-
 print(posts)
-authors = {}
 
+with open("resources/list.txt") as file:
+    phrases = file.readlines()
+
+authors = {}
 cooldown = 30
 
 
 def bot_login():
     print("Currently listening in:", os.environ['active_subreddit'])
     print("Logging in as", os.environ.get('reddit_username'), devprod)
-    reddit = praw.Reddit(username=os.environ['reddit_username'],
-                         password=os.environ['reddit_password'],
-                         client_id=os.environ['client_id'],
-                         client_secret=os.environ['client_secret'],
-                         user_agent="Joe Rogan quote responder:v0.0.1 (by /u/picmip)")
+    r = praw.Reddit(username=os.environ['reddit_username'],
+                    password=os.environ['reddit_password'],
+                    client_id=os.environ['client_id'],
+                    client_secret=os.environ['client_secret'],
+                    user_agent="Joe Rogan quote responder:v0.0.1 (by /u/picmip)")
     print("Logged in as", os.environ.get('reddit_username'), devprod)
-    return reddit
+    return r
 
 
-def run_bot(reddit):
+def run_bot(r):
     def check_pm():
-        for pm in reddit.inbox.unread():
+        for pm in r.inbox.unread():
             if isinstance(pm, Message):
                 frm = pm.author
                 sub = pm.subject
@@ -52,17 +54,13 @@ def run_bot(reddit):
                 print("Subject: ", sub)
 
                 repsub = 'Re: ' + sub
-                with open("resources/list.txt") as file:
-                    phrases = file.readlines()
-
-                random_phrase = random.choice(phrases)
-
-                msg = ">\"*" + random_phrase.strip() + "*\" \n\n ^Joe ^Rogan"
+                random_phrase_pm = random.choice(phrases)
+                msg = ">\"*" + random_phrase_pm.strip() + "*\" \n\n ^Joe ^Rogan"
                 pm.author.message(repsub, msg)
                 pm.mark_read()
-                print("Replied to PM with:", "\"", random_phrase.strip(), "\"")
+                print("Replied to PM with:", "\"", random_phrase_pm.strip(), "\"")
 
-    for comment in reddit.subreddit(os.environ['active_subreddit']).stream.comments():
+    for comment in r.subreddit(os.environ['active_subreddit']).stream.comments():
         def save_posts():
             posts[comment.id] = time.time()
             wr = csv.writer(open("resources/posts.csv", "w"))
@@ -75,13 +73,13 @@ def run_bot(reddit):
             for k, v in authors.items():
                 wr.writerow([k, v])
 
-        def check_if_post_replied_to(posts, key):
-            return key in posts.keys()
+        def post_not_replied(posts, post_id):
+            return post_id not in posts.keys()
 
         def check_author_cooldown_status(author):
             if author in authors:
-                timestamp = authors[author]
-                secondselapsed = (timestamp + cooldown) - time.time()
+                last_replied_post_timestamp = authors[author]
+                secondselapsed = (last_replied_post_timestamp + cooldown) - time.time()
                 return secondselapsed > 0
 
         def get_cooldown_time_remaining(author):
@@ -89,8 +87,15 @@ def run_bot(reddit):
                 timestamp = authors[author]
                 return int(cooldown - (time.time() - timestamp))
 
-        if not check_if_post_replied_to(posts,
-                        comment.id) and "!joe" in comment.body.lower() and comment.created_utc > time.time() - 30:
+        def should_reply():
+            return post_not_replied(posts, comment.id) \
+                   and "!joe" in comment.body.lower() \
+                   and comment_is_new()
+
+        def comment_is_new():
+            return comment.created_utc > time.time() - 30
+
+        if should_reply():
             if check_author_cooldown_status(comment.author):
                 print(str(comment.author), "posted comment", comment.id, "but is in cooldown for another",
                       get_cooldown_time_remaining(comment.author), "seconds, doing nothing")
@@ -98,11 +103,8 @@ def run_bot(reddit):
             else:
                 print("Comment containing \"!joe\" posted by", str(comment.author), "to",
                       "https://reddit.com" + comment.submission.permalink + comment.id)
-                with open("resources/list.txt") as file:
-                    phrases = file.readlines()
-                random_phrase = random.choice(phrases)
-
                 try:
+                    random_phrase = random.choice(phrases)
                     comment.reply(">\"*" + random_phrase.strip() + "*\" \n\n ^Joe ^Rogan")
                     print("Replied to comment ", comment.id, "with", "\"", random_phrase.strip(), "\"")
                 except APIException as e:
@@ -111,8 +113,7 @@ def run_bot(reddit):
                 save_cooldown()
                 save_posts()
 
-        elif not check_if_post_replied_to(posts,
-                          comment.id) and "!joe" in comment.body.lower() and comment.created_utc < time.time() - 30:
+        elif should_reply():
             now = int(time.time())
             then = int(comment.created_utc)
             delta = now - then

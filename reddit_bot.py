@@ -26,7 +26,7 @@ with open("resources/list.txt") as file:
     phrases = file.readlines()
 
 authors = {}
-cooldown = 30
+cooldown = 180
 
 
 def bot_login():
@@ -43,8 +43,6 @@ def bot_login():
 
 def run_bot(r):
     for comment in r.subreddit(os.environ['active_subreddit']).stream.comments():
-        print("test")
-
         def save_posts():
             posts[comment.id] = time.time()
             wr = csv.writer(open("resources/posts.csv", "w"))

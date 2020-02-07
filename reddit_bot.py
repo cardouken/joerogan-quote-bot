@@ -8,7 +8,7 @@ import traceback
 import praw
 from praw.exceptions import APIException
 
-if os.environ.get('reddit_username') == 'ckypop':
+if os.environ.get('reddit_username') != 'jamiepullthatquote':
     devprod = "(DEV MODE)"
 else:
     devprod = "(PRODUCTION LIVE)"
@@ -22,11 +22,18 @@ with open("resources/posts.csv") as f:
         posts[key] = val
 print(posts)
 
+phrases = []
 with open("resources/list.txt") as file:
-    phrases = file.readlines()
+    for line in file:
+        phrases.append(line.strip())
+
+triggers = []
+with open("resources/triggers.txt") as file:
+    for line in file:
+        triggers.append(line.strip())
 
 authors = {}
-cooldown = 180
+cooldown = 300
 
 
 def bot_login():
@@ -61,28 +68,45 @@ def run_bot(r):
         def check_author_cooldown_status(author):
             if author in authors:
                 last_replied_post_timestamp = authors[author]
-                secondselapsed = (last_replied_post_timestamp + cooldown) - time.time()
-                return secondselapsed > 0
+                seconds_elapsed = (last_replied_post_timestamp + cooldown) - time.time()
+                return seconds_elapsed > 0
 
         def remaining_cooldown(author):
             if author in authors:
                 timestamp = authors[author]
                 return int(cooldown - (time.time() - timestamp))
 
-        if post_not_replied(posts, comment.id) and "!joe" in comment.body.lower():
+        if post_not_replied(posts, comment.id) and any(
+                word.lower() in comment.body.lower() for word in triggers or "!joe" in comment.body.lower()):
             if comment.created_utc > time.time() - 30:
                 if check_author_cooldown_status(comment.author):
                     print(str(comment.author), "posted comment", comment.id, "but is in cooldown for another",
                           remaining_cooldown(comment.author), "seconds, doing nothing")
                 else:
-                    print("Comment containing \"!joe\" posted by", str(comment.author), "to",
-                          "https://reddit.com" + comment.submission.permalink + comment.id)
-                    try:
-                        random_phrase = random.choice(phrases)
-                        comment.reply(">\"*" + random_phrase.strip() + "*\" \n\n ^Joe ^Rogan")
-                        print("Replied to comment ", comment.id, "with", "\"", random_phrase.strip(), "\"")
-                    except APIException as e:
-                        traceback.print_exc(e)
+                    if comment.author != os.environ.get('reddit_username'):
+                        print("Comment with trigger keyword posted by", str(comment.author), "to",
+                              "https://reddit.com" + comment.submission.permalink + comment.id)
+                        try:
+                            if "!joe" in comment.body.lower():
+                                random_phrase = random.choice(phrases)
+                                comment.reply(">\"*" + random_phrase.strip() + "*\" \n\n ^Joe ^Rogan")
+                                print("Replied to comment ", comment.id, "with", "\"",
+                                      random_phrase.strip(), "\"")
+
+                            else:
+                                phrases_arr = []
+                                for trigger in triggers:
+                                    if trigger.lower() in comment.body.lower():
+                                        for phrase in phrases:
+                                            if trigger.lower() in phrase.lower():
+                                                phrases_arr.append(phrase)
+                                random_array_phrase = random.choice(phrases_arr)
+                                comment.reply(">\"*" + random_array_phrase + "*\" \n\n ^Joe ^Rogan")
+                                print("Replied to comment", comment.id, "with", "\"",
+                                      random_array_phrase, "\"")
+
+                        except APIException as e:
+                            traceback.print_exc(e)
 
                     save_cooldown()
                     save_posts()

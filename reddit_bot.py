@@ -4,6 +4,8 @@ import os
 import random
 import time
 import traceback
+from praw.models import Message
+from multiprocessing import Process
 
 import praw
 from praw.exceptions import APIException
@@ -33,6 +35,7 @@ with open("resources/triggers.txt") as file:
         triggers.append(line.strip())
 
 authors = {}
+blacklist = {}
 cooldown = 300
 
 
@@ -46,6 +49,28 @@ def bot_login():
                     user_agent="Joe Rogan quote responder:v0.0.1 (by /u/picmip)")
     print("Logged in as", os.environ.get('reddit_username'), devprod)
     return r
+
+
+def check_pm(r):
+    for pm in r.inbox.unread():
+        if isinstance(pm, Message):
+            frm = pm.author
+            sub = pm.subject
+            msg = pm.body
+
+            print("PM from:", frm, "Subject:", sub, "Message:", msg)
+
+            repsub = 'Re: ' + sub
+
+            if "fuck off" in pm.body or "fuck off" in pm.subject:
+                blacklist[pm.author] = time.time()
+                wr = csv.writer(open("resources/blacklist.csv", "w"))
+                for k, v in blacklist.items():
+                    wr.writerow([k, v])
+                reply = "you have been unsubscribed from joe rogan facts and will not be replied to again"
+                pm.author.message(repsub, reply)
+                pm.mark_read()
+                print("Replied to PM with:", "\"", reply, "\"")
 
 
 def run_bot(r):
@@ -71,6 +96,9 @@ def run_bot(r):
                 seconds_elapsed = (last_replied_post_timestamp + cooldown) - time.time()
                 return seconds_elapsed > 0
 
+        def check_author_blacklist_status(author):
+            return author in blacklist
+
         def remaining_cooldown(author):
             if author in authors:
                 timestamp = authors[author]
@@ -82,6 +110,8 @@ def run_bot(r):
                 if check_author_cooldown_status(comment.author):
                     print(str(comment.author), "posted comment", comment.id, "but is in cooldown for another",
                           remaining_cooldown(comment.author), "seconds, doing nothing")
+                elif check_author_blacklist_status(comment.author):
+                    print(str(comment.author), "has asked to be blacklisted")
                 else:
                     if comment.author != os.environ.get('reddit_username'):
                         print("Comment with trigger keyword posted by", str(comment.author), "to",
@@ -89,7 +119,13 @@ def run_bot(r):
                         try:
                             if "!joe" in comment.body.lower():
                                 random_phrase = random.choice(phrases)
-                                comment.reply(">\"*" + random_phrase.strip() + "*\" \n\n ^Joe ^Rogan")
+                                comment.reply(
+                                    ">\"*" + random_phrase.strip() + "*\" \n\n ^Joe ^Rogan \n\n --- \n\n [^^^Click "
+                                                                     "^^^here ^^^to ^^^tell ^^^me ^^^to ^^^fuck "
+                                                                     "^^^off ^^^and ^^^unsubscribe ^^^from ^^^Joe "
+                                                                     "^^^Rogan's ^^^words ^^^of ^^^wisdom "
+                                                                     "^^^forever]("
+                                                                     "https://www.reddit.com/message/compose/?to=ckypop&subject=fuck%20off&message=fuck%20off)")
                                 print("Replied to comment ", comment.id, "with", "\"",
                                       random_phrase.strip(), "\"")
 
@@ -101,7 +137,13 @@ def run_bot(r):
                                             if trigger.lower() in phrase.lower():
                                                 phrases_arr.append(phrase)
                                 random_array_phrase = random.choice(phrases_arr)
-                                comment.reply(">\"*" + random_array_phrase + "*\" \n\n ^Joe ^Rogan")
+                                comment.reply(
+                                    ">\"*" + random_array_phrase + "*\" \n\n ^Joe ^Rogan  \n\n --- \n\n [^^^Click "
+                                                                   "^^^here ^^^to ^^^tell ^^^me ^^^to ^^^fuck "
+                                                                   "^^^off ^^^and ^^^unsubscribe ^^^from ^^^Joe "
+                                                                   "^^^Rogan's ^^^words ^^^of ^^^wisdom "
+                                                                   "^^^forever]("
+                                                                   "https://www.reddit.com/message/compose/?to=ckypop&subject=fuck%20off&message=fuck%20off)")
                                 print("Replied to comment", comment.id, "with", "\"",
                                       random_array_phrase, "\"")
 
@@ -123,5 +165,11 @@ def run_bot(r):
 
 reddit = bot_login()
 
-while True:
-    run_bot(reddit)
+
+def main():
+    Process(target=check_pm(reddit)).start()
+    Process(target=run_bot(reddit)).start()
+
+
+if __name__ == "__main__":
+    main()

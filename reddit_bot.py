@@ -2,14 +2,13 @@ import csv
 import datetime
 import os
 import random
-import re
 import time
 import traceback
 
 import praw
 from praw.exceptions import APIException
 
-if os.environ.get('reddit_username') == 'ckypop':
+if os.environ.get('reddit_username') != 'jamiepullthatquote':
     devprod = "(DEV MODE)"
 else:
     devprod = "(PRODUCTION LIVE)"
@@ -33,11 +32,8 @@ with open("resources/triggers.txt") as file:
     for line in file:
         triggers.append(line.strip())
 
-for subs in triggers:
-    res = [i for i in phrases if subs in i]
-
 authors = {}
-cooldown = 180
+cooldown = 300
 
 
 def bot_login():
@@ -80,44 +76,49 @@ def run_bot(r):
                 timestamp = authors[author]
                 return int(cooldown - (time.time() - timestamp))
 
-        if post_not_replied(posts, comment.id) and any(word in comment.body.lower() for word in triggers):
+        if post_not_replied(posts, comment.id) and any(
+                word.lower() in comment.body.lower() for word in triggers or "!joe" in comment.body.lower()):
             if comment.created_utc > time.time() - 30:
                 if check_author_cooldown_status(comment.author):
                     print(str(comment.author), "posted comment", comment.id, "but is in cooldown for another",
                           remaining_cooldown(comment.author), "seconds, doing nothing")
                 else:
-                    print("Comment containing \"!joe\" posted by", str(comment.author), "to",
-                          "https://reddit.com" + comment.submission.permalink + comment.id)
-                    try:
-                        new_comment = comment.body.lower()
-                        new_comment_words = new_comment.split()
-                        for trigger in triggers:
-                            if trigger in new_comment_words:
-                                for phrase in phrases:
-                                    if phrase in trigger:
-                                        print(phrase)
-                            else:
+                    if comment.author != os.environ.get('reddit_username'):
+                        print("Comment with trigger keyword posted by", str(comment.author), "to",
+                              "https://reddit.com" + comment.submission.permalink + comment.id)
+                        try:
+                            if "!joe" in comment.body.lower():
                                 random_phrase = random.choice(phrases)
                                 comment.reply(">\"*" + random_phrase.strip() + "*\" \n\n ^Joe ^Rogan")
-                                print("Replied to comment ", comment.id, "with", "\"", random_phrase.strip(), "\"")
-                    except APIException as e:
-                        traceback.print_exc(e)
+                                print("Replied to comment ", comment.id, "with", "\"",
+                                      random_phrase.strip(), "\"")
 
-                    # random_phrase =
-                    # comment.reply(">\"*" + random_phrase.strip() + "*\" \n\n ^Joe ^Rogan")
-                    # print("Replied to comment ", comment.id, "with", "\"", random_phrase.strip(), "\"")
+                            else:
+                                phrases_arr = []
+                                for trigger in triggers:
+                                    if trigger.lower() in comment.body.lower():
+                                        for phrase in phrases:
+                                            if trigger.lower() in phrase.lower():
+                                                phrases_arr.append(phrase)
+                                random_array_phrase = random.choice(phrases_arr)
+                                comment.reply(">\"*" + random_array_phrase + "*\" \n\n ^Joe ^Rogan")
+                                print("Replied to comment", comment.id, "with", "\"",
+                                      random_array_phrase, "\"")
 
-                save_cooldown()
+                        except APIException as e:
+                            traceback.print_exc(e)
+
+                    save_cooldown()
+                    save_posts()
+
+            elif comment.created_utc < time.time() - 30:
+                now = int(time.time())
+                then = int(comment.created_utc)
+                delta = now - then
+                print(comment.id, "posted",
+                      datetime.datetime.fromtimestamp(then).strftime('%H:%M:%S %d/%m/%Y') + ",",
+                      delta, "seconds or", round(delta / 60, 1), "minutes ago")
                 save_posts()
-
-        elif comment.created_utc < time.time() - 30:
-            now = int(time.time())
-            then = int(comment.created_utc)
-            delta = now - then
-            print(comment.id, "posted",
-                  datetime.datetime.fromtimestamp(then).strftime('%H:%M:%S %d/%m/%Y') + ",",
-                  delta, "seconds or", round(delta / 60, 1), "minutes ago")
-            save_posts()
 
 
 reddit = bot_login()

@@ -196,11 +196,8 @@ def fetch_blacklist():
 
 def fetch_replied_posts():
     sql = "SELECT post_id, timestamp FROM public.posts"
-    data = execute_db_query(sql)
-    print("Posts replied to fetched")
-
-    for row in data:
-        posts[row[0]] = time.time()
+    execute_db_query(sql)
+    print("Fetched posts we have already replied to")
 
 
 def insert_to_blacklist(user):

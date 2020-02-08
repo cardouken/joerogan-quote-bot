@@ -63,14 +63,14 @@ def main():
 def check_comments(r):
     for comment in r.subreddit(os.environ['active_subreddit']).stream.comments():
         check_pm(r)
-        user_self = user = os.environ.get('reddit_username')
-        user_not_self = user != os.environ.get('reddit_username')
+        user = comment.author
+        user_not_self = comment.author != os.environ.get('reddit_username')
         comment_body = comment.body.lower()
         comment_is_new = comment.created_utc > time.time() - comment_expiry_in_seconds
         comment_url = "https://reddit.com" + comment.submission.permalink + comment.id
         comment_has_keyword_without_reply = comment.id not in posts.keys() and keyword_found_in_comment(comment_body)
 
-        if user_self and "ya yeet" in comment_body:
+        if not user_not_self and "ya yeet" in comment_body:
             parent = comment.parent()
             insert_to_blacklist(parent.author)
 

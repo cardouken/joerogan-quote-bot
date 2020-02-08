@@ -72,14 +72,6 @@ def run_bot(r):
                 save_cooldown(comment)
                 save_posts(comment)
 
-        elif comment_older_than_30sec:
-            now = int(time.time())
-            then = int(comment.created_utc)
-            strftime = datetime.datetime.fromtimestamp(then).strftime('%H:%M:%S %d/%m/%Y')
-            delta = now - then
-            print(comment_url, "posted", strftime + ",", delta, "seconds /", round(delta / 60, 1), "minutes ago")
-            save_posts(comment)
-
 
 def check_pm(r):
     for pm in r.inbox.unread():
@@ -162,22 +154,22 @@ def comment_reply_random(comment, random_phrase):
     comment.reply(
         ">\"*" + random_phrase.strip()
         + "*\" \n\n ^Joe ^Rogan \n\n --- \n\n [^^^Click "
-          "^^^here ^^^to ^^^tell ^^^me ^^^to ^^^fuck "
-          "^^^off ^^^and ^^^unsubscribe ^^^from ^^^Joe "
-          "^^^Rogan's ^^^words ^^^of ^^^wisdom "
-          "^^^forever]("
-          "https://www.reddit.com/message/compose/?to=jamiepullthatquote&subject=fuck%20off&message=fuck%20off)")
+          "^^^here ^^^to ^^^tell ^^^me ^^^to ^^^get "
+          "^^^lost ^^^or ^^^if ^^^something ^^^is "
+          "^^^fucked]("
+          "https://www.reddit.com/message/compose/?to=" + os.environ.get(
+            'reddit_username') + "&subject=fuck%20off&message=fuck%20off)")
 
 
 def comment_reply(comment, random_array_phrase):
     comment.reply(
         ">\"*" + random_array_phrase
         + "*\" \n\n ^Joe ^Rogan  \n\n --- \n\n [^^^Click "
-          "^^^here ^^^to ^^^tell ^^^me ^^^to ^^^fuck "
-          "^^^off ^^^and ^^^unsubscribe ^^^from ^^^Joe "
-          "^^^Rogan's ^^^words ^^^of ^^^wisdom "
-          "^^^forever]("
-          "https://www.reddit.com/message/compose/?to=jamiepullthatquote&subject=fuck%20off&message=fuck%20off)")
+          "^^^here ^^^to ^^^tell ^^^me ^^^to ^^^get "
+          "^^^lost ^^^or ^^^if ^^^something ^^^is "
+          "^^^fucked]("
+          "https://www.reddit.com/message/compose/?to=" + os.environ.get(
+            'reddit_username') + "&subject=fuck%20off&message=fuck%20off)")
 
 
 def get_posts():

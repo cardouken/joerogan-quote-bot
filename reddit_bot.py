@@ -32,6 +32,16 @@ def connect_to_db():
         port=os.environ['db_port'])
 
 
+def execute_db_query(sql):
+    con = connect_to_db()
+    cursor = con.cursor()
+    cursor.execute(sql)
+    data = cursor.fetchall()
+    con.commit()
+    con.close()
+    return data
+
+
 def main():
     print("Currently listening in:", os.environ['active_subreddit'])
 
@@ -62,11 +72,11 @@ def check_comments(r):
 
         if user_self and "ya yeet" in comment_body:
             parent = comment.parent()
-            save_blacklist(parent.author)
+            insert_to_blacklist(parent.author)
 
         if comment_has_keyword_without_reply and comment_is_new and user_not_self:
             if user_blacklisted(user):
-                print(user, "has asked to be blacklisted")
+                print(user, "requested to be blacklisted")
             elif user_in_cooldown(user):
                 print(user, "posted", comment_url, "but is on cooldown for", remaining_cooldown(user))
             else:
@@ -84,7 +94,7 @@ def check_comments(r):
                 except APIException as e:
                     traceback.print_exc(e)
 
-            save_posts(comment)
+            insert_posts(comment)
             cooldowns[comment.author] = time.time()
 
 
@@ -99,21 +109,22 @@ def check_pm(r):
             reply_subject = 'Re: ' + subject
 
             if "fuck off" in message or "fuck off" in subject:
-                save_blacklist(user)
-                reply_message = "You have been unsubscribed from Joe Rogan's facts of life and will not be replied to again. \n" \
+                insert_to_blacklist(user)
+                reply_message = "You have been unsubscribed from Joe Rogan's facts of life " \
+                                "and will not be replied to again. \n" \
                                 "If you decide to eventually reconsider your mistake, " \
                                 "[click here](https://www.reddit.com/message/compose/?to=" \
                                 + os.environ.get('reddit_username') + "&subject=im%20sorry&message=im%20sorry)"
                 user.message(reply_subject, reply_message)
                 pm.mark_read()
-                print("Replied to PM with:", "\"", reply_message, "\"")
+                print("Replied to PM with:", "\"" + reply_message + "\"")
 
             if "im sorry" in message or "im sorry" in subject and user_blacklisted(user):
                 remove_from_blacklist(str(user))
                 reply_message = "Welcome back freak bitches"
                 user.message(reply_subject, reply_message)
                 pm.mark_read()
-                print("Replied to PM with:", "\"", reply_message, "\"")
+                print("Replied to PM with:", "\"" + reply_message + "\"")
 
 
 def comment_reply(comment, phrase):
@@ -149,46 +160,34 @@ def user_in_cooldown(author):
 def remaining_cooldown(author):
     if author in cooldowns:
         timestamp = cooldowns[author]
-        return str(int(cooldown_time - (time.time() - timestamp))) + " seconds"
+        return "{0} seconds".format(str(int(cooldown_time - (time.time() - timestamp))))
 
 
 def user_blacklisted(author):
     return author in blacklist
 
 
-def clear_blacklist():
-    blacklist.clear()
-
-
 def fetch_keywords():
-    con = connect_to_db()
-    cursor = con.cursor()
-    cursor.execute("SELECT k.*, p.* "
-                   "FROM keywords k "
-                   "INNER JOIN keywords_phrases kp "
-                   "ON kp.keyword_id = k.id "
-                   "INNER JOIN phrases p "
-                   "ON p.phrase = kp.phrase")
-    data = cursor.fetchall()
+    sql = "SELECT k.*, p.* " \
+          "FROM keywords k " \
+          "INNER JOIN keywords_phrases kp " \
+          "ON kp.keyword_id = k.id " \
+          "INNER JOIN phrases p " \
+          "ON p.phrase = kp.phrase"
+    data = execute_db_query(sql)
 
     for row in data:
         if row[1] not in keywords_phrases:
             keywords_phrases[row[1]] = []
         keywords_phrases[row[1]].append(row[2])
 
-    con.commit()
     print("Keyword and phrases list retrieved successfully")
-    con.close()
 
 
 def fetch_blacklist():
-    con = connect_to_db()
-    cursor = con.cursor()
-    cursor.execute('SELECT username, blacklist FROM public.users')
-    data = cursor.fetchall()
-    con.commit()
+    sql = "SELECT username, blacklist FROM public.users"
+    data = execute_db_query(sql)
     print("Blacklisted users fetched")
-    con.close()
 
     for row in data:
         blacklist[row[0]] = time.time()
@@ -196,50 +195,33 @@ def fetch_blacklist():
 
 
 def fetch_replied_posts():
-    con = connect_to_db()
-    cursor = con.cursor()
-    cursor.execute('SELECT post_id, timestamp FROM public.posts;')
-    data = cursor.fetchall()
-    con.commit()
+    sql = "SELECT post_id, timestamp FROM public.posts"
+    data = execute_db_query(sql)
     print("Posts replied to fetched")
-    con.close()
 
     for row in data:
         posts[row[0]] = time.time()
-        print(row[0])
 
 
-def save_blacklist(user):
+def insert_to_blacklist(user):
     blacklist[user] = time.time()
-
-    con = connect_to_db()
-    cursor = con.cursor()
-    cursor.execute("INSERT INTO public.users(username, blacklist) VALUES (%s, %s)", (str(user), True))
-    con.commit()
+    sql = "INSERT INTO public.users(username, blacklist) VALUES (%s, %s)", (str(user), True)
+    cursor = execute_db_query(sql)
     print(user, "blacklisted", cursor.rowcount)
-    con.close()
 
 
-def save_posts(comment):
+def insert_posts(comment):
     posts[comment.id] = time.time()
-
-    con = connect_to_db()
-    cursor = con.cursor()
-    cursor.execute("INSERT INTO public.posts(post_id, "'timestamp'") VALUES (%s, %s)", (comment.id, time.time()))
-    con.commit()
+    sql = "INSERT INTO public.posts(post_id, "'timestamp'") VALUES (%s, %s)", (comment.id, time.time())
+    cursor = execute_db_query(sql)
     print(comment, "added to posts list, rows updated", cursor.rowcount)
-    con.close()
 
 
 def remove_from_blacklist(user):
     blacklist.pop(str(user))
-
-    con = connect_to_db()
-    cursor = con.cursor()
-    cursor.execute("DELETE FROM public.users WHERE username = %s", [user])
-    con.commit()
+    sql = "DELETE FROM public.users WHERE username = %s", [user]
+    cursor = execute_db_query(sql)
     print(user, "removed from blacklist, rows updated", cursor.rowcount)
-    con.close()
 
 
 if __name__ == "__main__":

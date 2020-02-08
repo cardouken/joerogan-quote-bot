@@ -32,14 +32,22 @@ def connect_to_db():
         port=os.environ['db_port'])
 
 
-def execute_db_query(sql):
+def fetch_query(sql):
     con = connect_to_db()
     cursor = con.cursor()
     cursor.execute(sql)
     data = cursor.fetchall()
-    con.commit()
     con.close()
     return data
+
+
+def insert_query(sql):
+    con = connect_to_db()
+    cursor = con.cursor()
+    cursor.execute(sql)
+    con.commit()
+    print(cursor.rowcount, "rows updated")
+    con.close()
 
 
 def main():
@@ -174,7 +182,7 @@ def fetch_keywords():
           "ON kp.keyword_id = k.id " \
           "INNER JOIN phrases p " \
           "ON p.phrase = kp.phrase"
-    data = execute_db_query(sql)
+    data = fetch_query(sql)
 
     for row in data:
         if row[1] not in keywords_phrases:
@@ -186,39 +194,39 @@ def fetch_keywords():
 
 def fetch_blacklist():
     sql = "SELECT username, blacklist FROM public.users"
-    data = execute_db_query(sql)
+    cursor = fetch_query(sql)
     print("Blacklisted users fetched")
 
-    for row in data:
+    for row in cursor:
         blacklist[row[0]] = time.time()
         print(row[0])
 
 
 def fetch_replied_posts():
     sql = "SELECT post_id, timestamp FROM public.posts"
-    execute_db_query(sql)
+    fetch_query(sql)
     print("Fetched posts we have already replied to")
 
 
 def insert_to_blacklist(user):
     blacklist[user] = time.time()
-    sql = "INSERT INTO public.users(username, blacklist) VALUES (%s, %s)", (str(user), True)
-    cursor = execute_db_query(sql)
-    print(user, "blacklisted", cursor.rowcount)
+    sql = "INSERT INTO public.users(username, blacklist) VALUES (%s, %r)".format(str(user), True)
+    insert_query(sql)
+    print(user, "blacklisted")
 
 
 def insert_posts(comment):
     posts[comment.id] = time.time()
-    sql = "INSERT INTO public.posts(post_id, "'timestamp'") VALUES (%s, %s)", (comment.id, time.time())
-    cursor = execute_db_query(sql)
-    print(comment, "added to posts list, rows updated", cursor.rowcount)
+    sql = "INSERT INTO public.posts(post_id, "'"timestamp"'") VALUES ('%s', %f)" % (comment.id, time.time())
+    insert_query(sql)
+    print(comment, "added to posts list")
 
 
 def remove_from_blacklist(user):
     blacklist.pop(str(user))
-    sql = "DELETE FROM public.users WHERE username = %s", [user]
-    cursor = execute_db_query(sql)
-    print(user, "removed from blacklist, rows updated", cursor.rowcount)
+    sql = "DELETE FROM public.users WHERE username = %s".format([user])
+    insert_query(sql)
+    print(user, "removed from blacklist")
 
 
 if __name__ == "__main__":

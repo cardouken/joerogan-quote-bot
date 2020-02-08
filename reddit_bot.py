@@ -49,7 +49,7 @@ def check_comments(r):
             if user_blacklisted(user):
                 print(user, "has asked to be blacklisted")
             elif user_in_cooldown(user):
-                print(user, "posted", comment_url, "but is in cooldown for", remaining_cooldown(user))
+                print(user, "posted", comment_url, "but is on cooldown for", remaining_cooldown(user))
             else:
                 print("Keyword found, posted by", user, "at", comment_url)
                 try:

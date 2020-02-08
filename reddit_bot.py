@@ -72,14 +72,6 @@ def run_bot(r):
                 save_cooldown(comment)
                 save_posts(comment)
 
-        elif comment_older_than_30sec:
-            now = int(time.time())
-            then = int(comment.created_utc)
-            strftime = datetime.datetime.fromtimestamp(then).strftime('%H:%M:%S %d/%m/%Y')
-            delta = now - then
-            print(comment_url, "posted", strftime + ",", delta, "seconds /", round(delta / 60, 1), "minutes ago")
-            save_posts(comment)
-
 
 def check_pm(r):
     for pm in r.inbox.unread():

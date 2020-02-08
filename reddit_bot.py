@@ -1,29 +1,40 @@
-import csv
 import os
 import random
 import time
 import traceback
 
 import praw
+import psycopg2
 from praw.exceptions import APIException
 from praw.models import Message
 
 blacklist = {}
 posts = {}
 cooldowns = {}
-keywords = []
-phrases = []
+keywords_phrases = {}
 
 if os.environ.get('reddit_username') != 'jamiepullthatquote':
     cooldown_time = int(os.environ['cooldown_dev'])
+    comment_expiry_in_seconds = 120
     dev_env = "(DEVELOPMENT MODE)"
 else:
     cooldown_time = int(os.environ['cooldown_time'])
+    comment_expiry_in_seconds = 30
     dev_env = "(PRODUCTION MODE)"
+
+
+def connect_to_db():
+    return psycopg2.connect(
+        database=os.environ['db_name'],
+        user=os.environ['db_user'],
+        password=os.environ['db_pw'],
+        host=os.environ['db_host'],
+        port=os.environ['db_port'])
 
 
 def main():
     print("Currently listening in:", os.environ['active_subreddit'])
+
     print("Logging in as", os.environ.get('reddit_username'), dev_env)
     r = praw.Reddit(username=os.environ['reddit_username'],
                     password=os.environ['reddit_password'],
@@ -31,21 +42,29 @@ def main():
                     client_secret=os.environ['client_secret'],
                     user_agent="Joe Rogan quote responder:v1.1")
     print("Logged in as", os.environ.get('reddit_username'), dev_env)
-    load_resources()
+    print("Cooldown rate:", cooldown_time, "seconds &", "comment expiry:", comment_expiry_in_seconds, "seconds")
+
+    fetch_keywords()
+    fetch_replied_posts()
+    fetch_blacklist()
     check_comments(r)
 
 
 def check_comments(r):
     for comment in r.subreddit(os.environ['active_subreddit']).stream.comments():
         check_pm(r)
-        user = comment.author
+        user_self = user = os.environ.get('reddit_username')
         user_not_self = user != os.environ.get('reddit_username')
         comment_body = comment.body.lower()
-        comment_newer_than_30sec = comment.created_utc > time.time() - 30
+        comment_is_new = comment.created_utc > time.time() - comment_expiry_in_seconds
         comment_url = "https://reddit.com" + comment.submission.permalink + comment.id
         comment_has_keyword_without_reply = comment.id not in posts.keys() and keyword_found_in_comment(comment_body)
 
-        if comment_has_keyword_without_reply and comment_newer_than_30sec and user_not_self:
+        if user_self and "ya yeet" in comment_body:
+            parent = comment.parent()
+            save_blacklist(parent.author)
+
+        if comment_has_keyword_without_reply and comment_is_new and user_not_self:
             if user_blacklisted(user):
                 print(user, "has asked to be blacklisted")
             elif user_in_cooldown(user):
@@ -54,21 +73,19 @@ def check_comments(r):
                 print("Keyword found, posted by", user, "at", comment_url)
                 try:
                     if "!joe" in comment_body:
-                        phrase = random.choice(phrases)
+                        phrase = random.choice(keywords_phrases[random.choice(list(keywords_phrases.keys()))])
                         comment_reply(comment, phrase.strip())
                         print("Replied to comment", comment.id, "with:", phrase.strip())
                     else:
-                        phrases_arr = []
-                        find_keyword_in_comment(comment_body, phrases_arr)
-                        phrase = random.choice(phrases_arr)
+                        phrase = find_keyword_in_comment(comment_body)
                         comment_reply(comment, phrase)
                         print("Replied to comment", comment.id, "with:", phrase)
 
                 except APIException as e:
                     traceback.print_exc(e)
 
-            save_cooldown(comment)
             save_posts(comment)
+            cooldowns[comment.author] = time.time()
 
 
 def check_pm(r):
@@ -83,7 +100,17 @@ def check_pm(r):
 
             if "fuck off" in message or "fuck off" in subject:
                 save_blacklist(user)
-                reply_message = "you have been unsubscribed from joe rogan facts and will not be replied to again"
+                reply_message = "You have been unsubscribed from Joe Rogan's facts of life and will not be replied to again. \n" \
+                                "If you decide to eventually reconsider your mistake, " \
+                                "[click here](https://www.reddit.com/message/compose/?to=" \
+                                + os.environ.get('reddit_username') + "&subject=im%20sorry&message=im%20sorry)"
+                user.message(reply_subject, reply_message)
+                pm.mark_read()
+                print("Replied to PM with:", "\"", reply_message, "\"")
+
+            if "im sorry" in message or "im sorry" in subject:
+                remove_from_blacklist(str(user))
+                reply_message = "Welcome back freak bitches"
                 user.message(reply_subject, reply_message)
                 pm.mark_read()
                 print("Replied to PM with:", "\"", reply_message, "\"")
@@ -91,7 +118,7 @@ def check_pm(r):
 
 def comment_reply(comment, phrase):
     comment.reply(
-        ">\"*" + phrase
+        ">\"*" + str(phrase)
         + "*\" \n\n ^Joe ^Rogan  \n\n --- \n\n [^^^Click "
           "^^^here ^^^to ^^^tell ^^^me ^^^to ^^^get "
           "^^^lost ^^^or ^^^if ^^^something ^^^is "
@@ -101,36 +128,15 @@ def comment_reply(comment, phrase):
 
 
 def keyword_found_in_comment(comment_body):
-    return any(word.lower() in comment_body for word in keywords or "!joe" in comment_body)
+    for word in keywords_phrases.keys():
+        if word.lower() in comment_body or "!joe" in comment_body:
+            return True
 
 
-def find_keyword_in_comment(comment_body, phrases_arr):
-    for word in keywords:
+def find_keyword_in_comment(comment_body):
+    for word in keywords_phrases.keys():
         if word.lower() in comment_body:
-            for phrase in phrases:
-                if word.lower() in phrase.lower():
-                    phrases_arr.append(phrase)
-
-
-def save_posts(comment):
-    posts[comment.id] = time.time()
-    wr = csv.writer(open("resources/posts.csv", "w"))
-    for k, v in posts.items():
-        wr.writerow([k, v])
-
-
-def save_cooldown(comment):
-    cooldowns[comment.author] = time.time()
-    wr = csv.writer(open("resources/cooldowns.csv", "w"))
-    for k, v in cooldowns.items():
-        wr.writerow([k, v])
-
-
-def save_blacklist(user):
-    blacklist[user] = time.time()
-    w = csv.writer(open("resources/blacklist.csv", "w"))
-    for k, v in blacklist.items():
-        w.writerow([k, v])
+            return keywords_phrases[word][random.randint(0, len(keywords_phrases[word]) - 1)]
 
 
 def user_in_cooldown(author):
@@ -150,45 +156,90 @@ def user_blacklisted(author):
     return author in blacklist
 
 
-def clear_cooldowns(comment):
-    cooldowns.clear()
-    save_cooldown(comment)
-
-
 def clear_blacklist():
     blacklist.clear()
 
 
-def load_resources():
-    with open("resources/cooldowns.csv") as file:
-        for line in file:
-            if ',' not in line:
-                continue
-            (key, val) = line.strip().split(',')
-            cooldowns[key] = val
+def fetch_keywords():
+    con = connect_to_db()
+    cursor = con.cursor()
+    cursor.execute("SELECT k.*, p.* "
+                   "FROM keywords k "
+                   "INNER JOIN keywords_phrases kp "
+                   "ON kp.keyword_id = k.id "
+                   "INNER JOIN phrases p "
+                   "ON p.phrase = kp.phrase")
+    data = cursor.fetchall()
 
-    with open("resources/keywords.txt") as file:
-        for line in file:
-            keywords.append(line.strip())
+    for row in data:
+        if row[1] not in keywords_phrases:
+            keywords_phrases[row[1]] = []
+        keywords_phrases[row[1]].append(row[2])
 
-    with open("resources/list.txt") as file:
-        for line in file:
-            phrases.append(line.strip())
+    con.commit()
+    print("Keyword and phrases list retrieved successfully")
+    con.close()
 
-    with open("resources/posts.csv") as f:
-        for line in f:
-            if ',' not in line:
-                continue
-            (key, val) = line.strip().split(',')
-            posts[key] = val
 
-    with open("resources/blacklist.csv") as file:
-        for line in file:
-            if ',' not in line:
-                continue
-            (key, val) = line.strip().split(',')
-            blacklist[key] = val
-            print("Blacklist:", blacklist)
+def fetch_blacklist():
+    con = connect_to_db()
+    cursor = con.cursor()
+    cursor.execute('SELECT username, blacklist FROM public.users')
+    data = cursor.fetchall()
+    con.commit()
+    print("Blacklisted users fetched")
+    con.close()
+
+    for row in data:
+        blacklist[row[0]] = time.time()
+        print(row[0])
+
+
+def fetch_replied_posts():
+    con = connect_to_db()
+    cursor = con.cursor()
+    cursor.execute('SELECT post_id, timestamp FROM public.posts;')
+    data = cursor.fetchall()
+    con.commit()
+    print("Posts replied to fetched")
+    con.close()
+
+    for row in data:
+        posts[row[0]] = time.time()
+        print(row[0])
+
+
+def save_blacklist(user):
+    blacklist[user] = time.time()
+
+    con = connect_to_db()
+    cursor = con.cursor()
+    cursor.execute("INSERT INTO public.users(username, blacklist) VALUES (%s, %s)", (str(user), True))
+    con.commit()
+    print(user, "blacklisted", cursor.rowcount)
+    con.close()
+
+
+def save_posts(comment):
+    posts[comment.id] = time.time()
+
+    con = connect_to_db()
+    cursor = con.cursor()
+    cursor.execute("INSERT INTO public.posts(post_id, "'timestamp'") VALUES (%s, %s)", (comment.id, time.time()))
+    con.commit()
+    print(comment, "added to posts list, rows updated", cursor.rowcount)
+    con.close()
+
+
+def remove_from_blacklist(user):
+    blacklist.pop(str(user))
+
+    con = connect_to_db()
+    cursor = con.cursor()
+    cursor.execute("DELETE FROM public.users WHERE username = %s", [user])
+    con.commit()
+    print(user, "removed from blacklist, rows updated", cursor.rowcount)
+    con.close()
 
 
 if __name__ == "__main__":

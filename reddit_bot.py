@@ -63,8 +63,8 @@ def main():
     print("Cooldown rate:", cooldown_time, "seconds &", "comment expiry:", comment_expiry_in_seconds, "seconds")
 
     fetch_keywords()
-    fetch_replied_posts()
     fetch_blacklist()
+    fetch_replied_posts()
     check_comments(r)
 
 
@@ -188,7 +188,6 @@ def fetch_keywords():
         if row[1] not in keywords_phrases:
             keywords_phrases[row[1]] = []
         keywords_phrases[row[1]].append(row[2])
-
     print("Keyword and phrases list retrieved successfully")
 
 
@@ -204,8 +203,11 @@ def fetch_blacklist():
 
 def fetch_replied_posts():
     sql = "SELECT post_id, timestamp FROM public.posts"
-    fetch_query(sql)
+    cursor = fetch_query(sql)
     print("Fetched posts we have already replied to")
+    for row in cursor:
+        posts[row[0]] = time.time()
+    print("Posts in DB:", len(posts))
 
 
 def insert_to_blacklist(user):

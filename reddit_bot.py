@@ -154,22 +154,22 @@ def comment_reply_random(comment, random_phrase):
     comment.reply(
         ">\"*" + random_phrase.strip()
         + "*\" \n\n ^Joe ^Rogan \n\n --- \n\n [^^^Click "
-          "^^^here ^^^to ^^^tell ^^^me ^^^to ^^^fuck "
-          "^^^off ^^^and ^^^unsubscribe ^^^from ^^^Joe "
-          "^^^Rogan's ^^^words ^^^of ^^^wisdom "
-          "^^^forever]("
-          "https://www.reddit.com/message/compose/?to=jamiepullthatquote&subject=fuck%20off&message=fuck%20off)")
+          "^^^here ^^^to ^^^tell ^^^me ^^^to ^^^get "
+          "^^^lost ^^^or ^^^if ^^^something ^^^is "
+          "^^^fucked]("
+          "https://www.reddit.com/message/compose/?to=" + os.environ.get(
+            'reddit_username') + "&subject=fuck%20off&message=fuck%20off)")
 
 
 def comment_reply(comment, random_array_phrase):
     comment.reply(
         ">\"*" + random_array_phrase
         + "*\" \n\n ^Joe ^Rogan  \n\n --- \n\n [^^^Click "
-          "^^^here ^^^to ^^^tell ^^^me ^^^to ^^^fuck "
-          "^^^off ^^^and ^^^unsubscribe ^^^from ^^^Joe "
-          "^^^Rogan's ^^^words ^^^of ^^^wisdom "
-          "^^^forever]("
-          "https://www.reddit.com/message/compose/?to=jamiepullthatquote&subject=fuck%20off&message=fuck%20off)")
+          "^^^here ^^^to ^^^tell ^^^me ^^^to ^^^get "
+          "^^^lost ^^^or ^^^if ^^^something ^^^is "
+          "^^^fucked]("
+          "https://www.reddit.com/message/compose/?to=" + os.environ.get(
+            'reddit_username') + "&subject=fuck%20off&message=fuck%20off)")
 
 
 def get_posts():

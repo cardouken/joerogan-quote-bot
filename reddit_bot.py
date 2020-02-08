@@ -166,7 +166,7 @@ def comment_reply_random(comment, random_phrase):
           "^^^off ^^^and ^^^unsubscribe ^^^from ^^^Joe "
           "^^^Rogan's ^^^words ^^^of ^^^wisdom "
           "^^^forever]("
-          "https://www.reddit.com/message/compose/?to=ckypop&subject=fuck%20off&message=fuck%20off)")
+          "https://www.reddit.com/message/compose/?to=jamiepullthatquote&subject=fuck%20off&message=fuck%20off)")
 
 
 def comment_reply(comment, random_array_phrase):
@@ -177,7 +177,7 @@ def comment_reply(comment, random_array_phrase):
           "^^^off ^^^and ^^^unsubscribe ^^^from ^^^Joe "
           "^^^Rogan's ^^^words ^^^of ^^^wisdom "
           "^^^forever]("
-          "https://www.reddit.com/message/compose/?to=ckypop&subject=fuck%20off&message=fuck%20off)")
+          "https://www.reddit.com/message/compose/?to=jamiepullthatquote&subject=fuck%20off&message=fuck%20off)")
 
 
 def get_posts():

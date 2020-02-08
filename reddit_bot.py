@@ -77,7 +77,7 @@ def run_bot(r):
             then = int(comment.created_utc)
             strftime = datetime.datetime.fromtimestamp(then).strftime('%H:%M:%S %d/%m/%Y')
             delta = now - then
-            print(comment.id, "posted", strftime + ",", delta, "seconds/", round(delta / 60, 1), "minutes ago")
+            print(comment_url, "posted", strftime + ",", delta, "seconds /", round(delta / 60, 1), "minutes ago")
             save_posts(comment)
 
 

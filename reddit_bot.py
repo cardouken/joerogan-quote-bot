@@ -212,7 +212,7 @@ def fetch_replied_posts():
 
 def insert_to_blacklist(user):
     blacklist[user] = time.time()
-    sql = "INSERT INTO public.users(username, blacklist) VALUES (%s, %r)".format(str(user), True)
+    sql = "INSERT INTO public.users(username, blacklist) VALUES ('%s', '%r')" % (str(user), True)
     insert_query(sql)
     print(user, "blacklisted")
 

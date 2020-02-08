@@ -225,8 +225,8 @@ def insert_posts(comment):
 
 
 def remove_from_blacklist(user):
-    blacklist.pop(str(user))
-    sql = "DELETE FROM public.users WHERE username = %s".format([user])
+    blacklist.pop(user)
+    sql = "DELETE FROM public.users WHERE username = '%s'" % user
     insert_query(sql)
     print(user, "removed from blacklist")
 

@@ -1,5 +1,4 @@
 import csv
-import datetime
 import os
 import random
 import time
@@ -41,36 +40,34 @@ def run_bot(r):
         user = comment.author
         cbody = comment.body.lower()
         comment_newer_than_30sec = comment.created_utc > time.time() - 30
-        comment_older_than_30sec = comment.created_utc < time.time() - 30
         user_not_self = user != os.environ.get('reddit_username')
         comment_url = "https://reddit.com" + comment.submission.permalink + comment.id
         comment_has_keyword_without_reply = comment.id not in posts.keys() and keyword_found_in_comment(cbody)
 
-        if comment_has_keyword_without_reply and comment_newer_than_30sec:
+        if comment_has_keyword_without_reply and comment_newer_than_30sec and user_not_self:
             if user_blacklisted(user):
                 print(user, "has asked to be blacklisted")
             elif user_in_cooldown(user):
                 print(user, "posted", comment.id, "but is in cooldown for", remaining_cooldown(user), "seconds")
             else:
-                if user_not_self:
-                    print("Keyword found posted by", user, "at", comment_url)
-                    try:
-                        if "!joe" in cbody:
-                            random_phrase = random.choice(phrases)
-                            comment_reply_random(comment, random_phrase)
-                            print("Replied to comment", comment.id, "with:", random_phrase.strip())
-                        else:
-                            phrases_arr = []
-                            find_keyword_in_comment(cbody, phrases_arr)
-                            random_array_phrase = random.choice(phrases_arr)
-                            comment_reply(comment, random_array_phrase)
-                            print("Replied to comment", comment.id, "with:", random_array_phrase)
+                print("Keyword found posted by", user, "at", comment_url)
+                try:
+                    if "!joe" in cbody:
+                        random_phrase = random.choice(phrases)
+                        comment_reply_random(comment, random_phrase)
+                        print("Replied to comment", comment.id, "with:", random_phrase.strip())
+                    else:
+                        phrases_arr = []
+                        find_keyword_in_comment(cbody, phrases_arr)
+                        random_array_phrase = random.choice(phrases_arr)
+                        comment_reply(comment, random_array_phrase)
+                        print("Replied to comment", comment.id, "with:", random_array_phrase)
 
-                    except APIException as e:
-                        traceback.print_exc(e)
+                except APIException as e:
+                    traceback.print_exc(e)
 
-                save_cooldown(comment)
-                save_posts(comment)
+            save_cooldown(comment)
+            save_posts(comment)
 
 
 def check_pm(r):

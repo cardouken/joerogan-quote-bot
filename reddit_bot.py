@@ -39,8 +39,8 @@ def run_bot(r):
         check_pm(r)
         user = comment.author
         cbody = comment.body.lower()
-        comment_newer_than_30sec = comment.created_utc > time.time() - 30
         user_not_self = user != os.environ.get('reddit_username')
+        comment_newer_than_30sec = comment.created_utc > time.time() - 30
         comment_url = "https://reddit.com" + comment.submission.permalink + comment.id
         comment_has_keyword_without_reply = comment.id not in posts.keys() and keyword_found_in_comment(cbody)
 
@@ -53,15 +53,15 @@ def run_bot(r):
                 print("Keyword found posted by", user, "at", comment_url)
                 try:
                     if "!joe" in cbody:
-                        random_phrase = random.choice(phrases)
-                        comment_reply_random(comment, random_phrase)
-                        print("Replied to comment", comment.id, "with:", random_phrase.strip())
+                        phrase = random.choice(phrases)
+                        comment_reply(comment, phrase.strip())
+                        print("Replied to comment", comment.id, "with:", phrase.strip())
                     else:
                         phrases_arr = []
                         find_keyword_in_comment(cbody, phrases_arr)
-                        random_array_phrase = random.choice(phrases_arr)
-                        comment_reply(comment, random_array_phrase)
-                        print("Replied to comment", comment.id, "with:", random_array_phrase)
+                        phrase = random.choice(phrases_arr)
+                        comment_reply(comment, phrase)
+                        print("Replied to comment", comment.id, "with:", phrase)
 
                 except APIException as e:
                     traceback.print_exc(e)
@@ -147,20 +147,9 @@ def find_keyword_in_comment(cbody, phrases_arr):
                     phrases_arr.append(phrase)
 
 
-def comment_reply_random(comment, random_phrase):
+def comment_reply(comment, phrase):
     comment.reply(
-        ">\"*" + random_phrase.strip()
-        + "*\" \n\n ^Joe ^Rogan \n\n --- \n\n [^^^Click "
-          "^^^here ^^^to ^^^tell ^^^me ^^^to ^^^get "
-          "^^^lost ^^^or ^^^if ^^^something ^^^is "
-          "^^^fucked]("
-          "https://www.reddit.com/message/compose/?to=" + os.environ.get(
-            'reddit_username') + "&subject=fuck%20off&message=fuck%20off)")
-
-
-def comment_reply(comment, random_array_phrase):
-    comment.reply(
-        ">\"*" + random_array_phrase
+        ">\"*" + phrase
         + "*\" \n\n ^Joe ^Rogan  \n\n --- \n\n [^^^Click "
           "^^^here ^^^to ^^^tell ^^^me ^^^to ^^^get "
           "^^^lost ^^^or ^^^if ^^^something ^^^is "

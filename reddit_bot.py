@@ -108,7 +108,7 @@ def check_pm(r):
                 pm.mark_read()
                 print("Replied to PM with:", "\"", reply_message, "\"")
 
-            if "im sorry" in message or "im sorry" in subject:
+            if "im sorry" in message or "im sorry" in subject and user_blacklisted(user):
                 remove_from_blacklist(str(user))
                 reply_message = "Welcome back freak bitches"
                 user.message(reply_subject, reply_message)
